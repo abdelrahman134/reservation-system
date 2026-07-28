@@ -45,10 +45,11 @@ export default function UsersPage() {
     try {
       const res = await fetch('/api/users');
       const data = await res.json();
-      setUsers(data);
+      setUsers(Array.isArray(data) ? data : []);
       setLoading(false);
     } catch (err) {
       console.error(err);
+      setUsers([]);
       setLoading(false);
     }
   };
@@ -141,9 +142,10 @@ export default function UsersPage() {
     try {
       const res = await fetch(`/api/reservations?user=${user._id}`);
       const data = await res.json();
-      setSelectedUserHistory({ user, reservations: data });
+      setSelectedUserHistory({ user, reservations: Array.isArray(data) ? data : [] });
     } catch (err) {
       console.error(err);
+      setSelectedUserHistory({ user, reservations: [] });
     } finally {
       setLoadingHistory(false);
     }
@@ -156,6 +158,8 @@ export default function UsersPage() {
       </div>
     );
   }
+
+  const safeUsers = Array.isArray(users) ? users : [];
 
   return (
     <div className="space-y-6">
@@ -182,7 +186,7 @@ export default function UsersPage() {
 
       {/* Users Table */}
       <div className="glass-card rounded-2xl p-6">
-        {users.length === 0 ? (
+        {safeUsers.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-sm">
             {t('noUsersFound')}
           </div>
@@ -203,7 +207,7 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {users.map((user) => (
+                {safeUsers.map((user) => (
                   <tr key={user._id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-4 font-semibold text-slate-900">{user.name}</td>
                     <td className="px-4 py-4 text-slate-600">
@@ -215,7 +219,7 @@ export default function UsersPage() {
                       ${user.totalValue.toLocaleString()}
                     </td>
                     <td className="px-4 py-4 text-slate-500 text-xs">
-                      {format(new Date(user.createdAt), 'MMM dd, yyyy')}
+                      {user.createdAt ? format(new Date(user.createdAt), 'MMM dd, yyyy') : ''}
                     </td>
                     <td className="px-4 py-4 text-right rtl:text-left space-x-2 rtl:space-x-reverse">
                       <button
@@ -367,7 +371,7 @@ export default function UsersPage() {
             <div className="overflow-y-auto flex-1 py-2">
               {loadingHistory ? (
                 <div className="text-center py-8 text-slate-500">{t('saving')}</div>
-              ) : selectedUserHistory.reservations.length === 0 ? (
+              ) : !Array.isArray(selectedUserHistory.reservations) || selectedUserHistory.reservations.length === 0 ? (
                 <div className="text-center py-8 text-slate-500 text-sm">
                   {t('noHistoryUser')}
                 </div>
@@ -385,14 +389,14 @@ export default function UsersPage() {
                         <div className="text-xs text-slate-500 mt-1 flex items-center gap-2">
                           <Calendar className="w-3.5 h-3.5 text-blue-600" />
                           <span>
-                            {format(new Date(res.startDate), 'MMM dd, yyyy')} -{' '}
-                            {format(new Date(res.endDate), 'MMM dd, yyyy')}
+                            {res.startDate ? format(new Date(res.startDate), 'MMM dd, yyyy') : ''} -{' '}
+                            {res.endDate ? format(new Date(res.endDate), 'MMM dd, yyyy') : ''}
                           </span>
                         </div>
                       </div>
                       <div className="text-right rtl:text-left">
                         <div className="font-bold text-emerald-600 text-sm">
-                          ${res.value.toLocaleString()}
+                          ${(res.value || 0).toLocaleString()}
                         </div>
                         <span
                           className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold mt-1 uppercase ${

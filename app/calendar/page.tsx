@@ -78,12 +78,15 @@ export default function CalendarPage() {
         fetch('/api/reservations').then((r) => r.json()),
       ]);
 
-      setApartments(apRes);
-      setStaffList(usRes);
-      setReservations(resRes);
+      setApartments(Array.isArray(apRes) ? apRes : []);
+      setStaffList(Array.isArray(usRes) ? usRes : []);
+      setReservations(Array.isArray(resRes) ? resRes : []);
     } catch (err) {
       console.error(err);
-    } finally {
+      setApartments([]);
+      setStaffList([]);
+      setReservations([]);
+    } fontally: {
       setLoading(false);
     }
   };
@@ -104,11 +107,14 @@ export default function CalendarPage() {
   const monthDays = eachDayOfInterval({ start: startDate, end: endDate });
   const daysInMonthOnly = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
+  const safeReservations = Array.isArray(reservations) ? reservations : [];
+
   // Helper to find reservation for a given apartment on a given day
   const getReservationForDay = (aptId: string, day: Date) => {
-    return reservations.find((r) => {
-      if (r.status === 'cancelled') return false;
+    return safeReservations.find((r) => {
+      if (!r || r.status === 'cancelled') return false;
       if (aptId !== 'all' && r.apartment?._id !== aptId) return false;
+      if (!r.startDate || !r.endDate) return false;
       const start = parseISO(r.startDate);
       const end = parseISO(r.endDate);
       return isWithinInterval(day, { start, end }) || isSameDay(day, start);
@@ -117,9 +123,10 @@ export default function CalendarPage() {
 
   const handleCellClick = (day: Date, aptId?: string) => {
     const existing = aptId
-      ? reservations.find((r) => {
-          if (r.status === 'cancelled') return false;
+      ? safeReservations.find((r) => {
+          if (!r || r.status === 'cancelled') return false;
           if (r.apartment?._id !== aptId) return false;
+          if (!r.startDate || !r.endDate) return false;
           const start = parseISO(r.startDate);
           const end = parseISO(r.endDate);
           return isWithinInterval(day, { start, end }) || isSameDay(day, start);
@@ -138,6 +145,8 @@ export default function CalendarPage() {
       </div>
     );
   }
+
+  const safeApartments = Array.isArray(apartments) ? apartments : [];
 
   return (
     <div className="space-y-6">
@@ -215,7 +224,7 @@ export default function CalendarPage() {
               className="w-full sm:w-auto px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-slate-800"
             >
               <option value="all">{t('allApartmentsView')}</option>
-              {apartments.map((apt) => (
+              {safeApartments.map((apt) => (
                 <option key={apt._id} value={apt._id}>
                   {apt.name}
                 </option>
@@ -308,7 +317,7 @@ export default function CalendarPage() {
             </div>
 
             <div className="space-y-3">
-              {apartments.map((apt) => (
+              {safeApartments.map((apt) => (
                 <div
                   key={apt._id}
                   className="grid grid-cols-[160px_repeat(31,1fr)] items-center py-2 hover:bg-slate-50/80 rounded-xl transition-colors"
@@ -320,7 +329,7 @@ export default function CalendarPage() {
 
                   {daysInMonthOnly.map((d, i) => {
                     const res = getReservationForDay(apt._id, d);
-                    const isStart = res && isSameDay(parseISO(res.startDate), d);
+                    const isStart = res && res.startDate && isSameDay(parseISO(res.startDate), d);
 
                     return (
                       <div
@@ -379,13 +388,13 @@ export default function CalendarPage() {
                 <div className="p-3 bg-slate-50 rounded-xl space-y-1">
                   <span className="text-xs font-semibold text-slate-500 uppercase">{t('checkIn')}</span>
                   <p className="font-bold text-slate-900">
-                    {format(parseISO(selectedReservation.startDate), 'MMM dd, yyyy')}
+                    {selectedReservation.startDate ? format(parseISO(selectedReservation.startDate), 'MMM dd, yyyy') : ''}
                   </p>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl space-y-1">
                   <span className="text-xs font-semibold text-slate-500 uppercase">{t('checkOut')}</span>
                   <p className="font-bold text-slate-900">
-                    {format(parseISO(selectedReservation.endDate), 'MMM dd, yyyy')}
+                    {selectedReservation.endDate ? format(parseISO(selectedReservation.endDate), 'MMM dd, yyyy') : ''}
                   </p>
                 </div>
               </div>

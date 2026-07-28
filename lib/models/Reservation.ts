@@ -5,6 +5,10 @@ export interface IReservation extends Document {
   clientPhone: string;
   apartment: mongoose.Types.ObjectId;
   createdByStaff: mongoose.Types.ObjectId;
+  broker?: mongoose.Types.ObjectId;
+  commissionPercentage: number;
+  brokerCommissionAmount: number;
+  staffCommissionAmount: number;
   startDate: Date;
   endDate: Date;
   pricePerDay: number;
@@ -37,6 +41,27 @@ const ReservationSchema: Schema<IReservation> = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Staff member is required'],
+    },
+    broker: {
+      type: Schema.Types.ObjectId,
+      ref: 'Broker',
+      required: false,
+    },
+    commissionPercentage: {
+      type: Number,
+      default: 10,
+      min: [0, 'Percentage cannot be negative'],
+      max: [100, 'Percentage cannot exceed 100%'],
+    },
+    brokerCommissionAmount: {
+      type: Number,
+      default: 0,
+      min: [0, 'Amount cannot be negative'],
+    },
+    staffCommissionAmount: {
+      type: Number,
+      default: 0,
+      min: [0, 'Amount cannot be negative'],
     },
     startDate: {
       type: Date,

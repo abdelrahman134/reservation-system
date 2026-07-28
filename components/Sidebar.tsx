@@ -14,6 +14,7 @@ import {
   BarChart3,
   X,
   Building,
+  Briefcase,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -34,6 +35,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: t('dashboard'), href: '/', icon: LayoutDashboard },
     { name: t('users'), href: '/users', icon: Users },
     { name: t('apartments'), href: '/apartments', icon: Building2 },
+    { name: t('brokers'), href: '/brokers', icon: Briefcase },
     { name: t('reservations'), href: '/reservations', icon: CalendarCheck2 },
     { name: t('calendar'), href: '/calendar', icon: CalendarDays },
     { name: t('expenses'), href: '/expenses', icon: Receipt },

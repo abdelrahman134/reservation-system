@@ -32,6 +32,8 @@ export async function PATCH(
       clientPhone,
       apartment,
       createdByStaff,
+      broker,
+      commissionPercentage: rawCommPerc,
       startDate,
       endDate,
       pricePerDay,
@@ -62,6 +64,21 @@ export async function PATCH(
     const nights = Math.max(1, Math.round(diffTime / (1000 * 3600 * 24)));
     const totalValue = pricePerDay * nights;
 
+    // Calculate Commission Amounts
+    const hasBroker = !!broker && broker.trim() !== '' && broker !== 'none';
+    const commPerc = rawCommPerc !== undefined ? rawCommPerc : (hasBroker ? 15 : 10);
+
+    let brokerCommissionAmount = 0;
+    let staffCommissionAmount = 0;
+
+    if (hasBroker) {
+      brokerCommissionAmount = (totalValue * commPerc) / 100;
+      staffCommissionAmount = 0;
+    } else {
+      staffCommissionAmount = (totalValue * commPerc) / 100;
+      brokerCommissionAmount = 0;
+    }
+
     let session: mongoose.ClientSession | null = null;
 
     try {
@@ -72,6 +89,10 @@ export async function PATCH(
       existing.clientPhone = clientPhone;
       existing.apartment = apartment as any;
       existing.createdByStaff = createdByStaff as any;
+      existing.broker = hasBroker ? (broker as any) : null;
+      existing.commissionPercentage = commPerc;
+      existing.brokerCommissionAmount = brokerCommissionAmount;
+      existing.staffCommissionAmount = staffCommissionAmount;
       existing.startDate = startDate;
       existing.endDate = endDate;
       existing.pricePerDay = pricePerDay;
@@ -95,10 +116,15 @@ export async function PATCH(
         await session.abortTransaction();
         session.endSession();
       }
+
       existing.clientName = clientName;
       existing.clientPhone = clientPhone;
       existing.apartment = apartment as any;
       existing.createdByStaff = createdByStaff as any;
+      existing.broker = hasBroker ? (broker as any) : null;
+      existing.commissionPercentage = commPerc;
+      existing.brokerCommissionAmount = brokerCommissionAmount;
+      existing.staffCommissionAmount = staffCommissionAmount;
       existing.startDate = startDate;
       existing.endDate = endDate;
       existing.pricePerDay = pricePerDay;
@@ -114,7 +140,7 @@ export async function PATCH(
       );
     }
 
-    const populated = await existing.populate(['createdByStaff', 'apartment']);
+    const populated = await existing.populate(['createdByStaff', 'apartment', 'broker']);
     return NextResponse.json(populated);
   } catch (error: any) {
     return NextResponse.json(
@@ -145,7 +171,6 @@ export async function DELETE(
       session = await mongoose.startSession();
       session.startTransaction();
 
-      // Soft-delete reservation
       reservation = await Reservation.findByIdAndUpdate(
         params.id,
         { isActive: false, status: 'cancelled' },
@@ -158,7 +183,6 @@ export async function DELETE(
         return NextResponse.json({ error: 'Reservation not found' }, { status: 404 });
       }
 
-      // Cascade soft-delete to linked Revenue and Expense records
       await Revenue.updateMany(
         { reservation: params.id },
         { isActive: false },

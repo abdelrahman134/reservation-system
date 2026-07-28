@@ -50,6 +50,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Reservation not found' }, { status: 404 });
     }
 
+    // Upfront Commission Deduction Logic:
+    // If staff commission applies, deduct it upfront from logged revenue value.
+    // If broker commission applies, log full totalValue (broker is paid later via broker-payout expense).
+    const staffComm = reservationDoc.staffCommissionAmount || 0;
+    const netRevenueValue = staffComm > 0 ? Math.max(0, totalValue - staffComm) : totalValue;
+
     let session: mongoose.ClientSession | null = null;
     let deliveryDoc;
 
@@ -70,7 +76,7 @@ export async function POST(req: NextRequest) {
         await Revenue.findOneAndUpdate(
           { reservation, source: 'delivery' },
           {
-            value: totalValue,
+            value: netRevenueValue,
             user: staffUser,
             name: `Delivery — ${reservationDoc.clientName}`,
             isActive: true,
@@ -97,7 +103,7 @@ export async function POST(req: NextRequest) {
           [
             {
               name: `Delivery — ${reservationDoc.clientName}`,
-              value: totalValue,
+              value: netRevenueValue,
               user: staffUser,
               source: 'delivery',
               reservation,
@@ -127,7 +133,7 @@ export async function POST(req: NextRequest) {
         await Revenue.findOneAndUpdate(
           { reservation, source: 'delivery' },
           {
-            value: totalValue,
+            value: netRevenueValue,
             user: staffUser,
             name: `Delivery — ${reservationDoc.clientName}`,
             isActive: true,
@@ -146,7 +152,7 @@ export async function POST(req: NextRequest) {
 
         await Revenue.create({
           name: `Delivery — ${reservationDoc.clientName}`,
-          value: totalValue,
+          value: netRevenueValue,
           user: staffUser,
           source: 'delivery',
           reservation,

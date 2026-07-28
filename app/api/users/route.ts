@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import User from '@/lib/models/User';
-import Reservation from '@/lib/models/Reservation';
 import { userSchema } from '@/lib/validations';
-import mongoose from 'mongoose';
 
 export async function GET() {
   try {
@@ -21,7 +19,7 @@ export async function GET() {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ['$user', '$$userId'] },
+                    { $eq: ['$createdByStaff', '$$userId'] },
                     { $eq: ['$isActive', true] },
                     { $ne: ['$status', 'cancelled'] },
                   ],
@@ -33,6 +31,44 @@ export async function GET() {
         },
       },
       {
+        $lookup: {
+          from: 'revenues',
+          let: { userId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$user', '$$userId'] },
+                    { $eq: ['$isActive', true] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'revenues',
+        },
+      },
+      {
+        $lookup: {
+          from: 'expenses',
+          let: { userId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$user', '$$userId'] },
+                    { $eq: ['$isActive', true] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'expenses',
+        },
+      },
+      {
         $project: {
           _id: 1,
           name: 1,
@@ -40,7 +76,9 @@ export async function GET() {
           createdAt: 1,
           updatedAt: 1,
           reservationCount: { $size: '$reservations' },
-          totalValue: { $sum: '$reservations.value' },
+          totalValue: { $sum: '$reservations.totalValue' },
+          totalRevenueCollected: { $sum: '$revenues.value' },
+          totalExpensesPaid: { $sum: '$expenses.value' },
         },
       },
       { $sort: { createdAt: -1 } },

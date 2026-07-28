@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Apartment from '@/lib/models/Apartment';
-import Reservation from '@/lib/models/Reservation';
 import { apartmentSchema } from '@/lib/validations';
 
 export async function GET() {
@@ -39,7 +38,7 @@ export async function GET() {
           createdAt: 1,
           updatedAt: 1,
           reservationCount: { $size: '$reservations' },
-          totalValue: { $sum: '$reservations.value' },
+          totalValue: { $sum: '$reservations.totalValue' },
           reservations: 1,
         },
       },

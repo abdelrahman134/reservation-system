@@ -14,6 +14,7 @@ export const translations = {
     revenue: 'Revenue Logs',
     insights: 'Staff Insights',
     apartmentRevenue: 'Apartment Analytics',
+    brokers: 'Brokers & Commissions',
 
     // Common Actions & Buttons
     newBooking: 'New Reservation',
@@ -21,6 +22,8 @@ export const translations = {
     addApartment: 'Add Apartment',
     addExpense: 'Add Expense',
     addRevenue: 'Add Revenue Log',
+    addBroker: 'Add Broker',
+    recordPayout: 'Record Payout',
     delivery: 'Delivery',
     receiver: 'Receiver / Return',
     edit: 'Edit',
@@ -57,10 +60,32 @@ export const translations = {
     depositSource: 'Deposit',
     deliverySource: 'Delivery',
     receiverReturnSource: 'Insurance Return',
+    brokerPayoutSource: 'Broker Payout',
     status: 'Status',
     selectApartment: 'Select Apartment',
     selectGuest: 'Select Staff / User',
     userName: 'Staff Member Name',
+
+    // Broker & Commission Terms
+    broker: 'Broker',
+    noBrokerDirect: 'None / Direct Staff',
+    commissionPercentage: 'Commission Rate (%)',
+    brokerCommission: 'Broker Commission ($)',
+    staffCommission: 'Staff Commission ($)',
+    defaultPercentage: 'Default Commission (%)',
+    totalCommissionEarned: 'Total Commission Earned',
+    outstandingBalance: 'Outstanding Balance',
+    totalPayouts: 'Total Payouts',
+    payoutAmount: 'Payout Amount ($)',
+    payoutNote: 'Payout Note / Ref',
+
+    // Staff Accounting Terms
+    totalCashCollected: 'Total Cash Collected',
+    totalCashPaidOut: 'Total Cash Paid Out',
+    currentCashInHand: 'Current Cash in Hand',
+    staffCommissionEarned: 'Commission Kept Upfront',
+    brokerCommissionsHandled: 'Broker Commissions Handled',
+    netOwedToCompany: 'NET OWED TO COMPANY',
 
     // Time Filters
     allTime: 'All-Time Cumulative',
@@ -100,6 +125,16 @@ export const translations = {
     apartmentHistory: 'History',
     noHistoryApartment: 'No reservations on record for this apartment.',
 
+    // Brokers Page
+    brokersTitle: 'Brokers & Commissions',
+    brokersSubtitle: 'Track real estate brokers, earned commissions, payouts, and outstanding balances.',
+    brokerName: 'Broker Name',
+    addNewBroker: 'Add New Broker',
+    editBroker: 'Edit Broker',
+    noBrokersFound: 'No brokers registered. Click "Add Broker" to create one.',
+    recordBrokerPayout: 'Record Broker Payout',
+    reservationsBrought: 'Reservations Brought',
+
     // Reservations Page
     reservationsTitle: 'Reservations & Key Handoffs',
     reservationsSubtitle: 'Manage client bookings, click-to-call clients, hand over keys, and process returns.',
@@ -138,15 +173,15 @@ export const translations = {
 
     // Expenses Page
     expensesTitle: 'Cash Expenses Log',
-    expensesSubtitle: 'Track manual costs and auto-logged insurance returns per staff member.',
+    expensesSubtitle: 'Track manual costs, auto-logged insurance returns, and broker payouts.',
 
     // Revenue Page
     revenueLogsTitle: 'Cash Revenue Log',
     revenueLogsSubtitle: 'Track manual income, deposits, and delivery cash collections per staff member.',
 
     // Insights Page
-    insightsTitle: 'Staff Money-Flow Insights',
-    insightsSubtitle: 'Net cash calculations (Revenue − Expenses) and itemized activity per staff member.',
+    insightsTitle: 'Staff Money-Flow & Dues Insights',
+    insightsSubtitle: 'Separation of drawer cash from staff commissions and net company dues.',
     earnedHandled: 'Net Earned / Handled Cash',
     itemizedBreakdown: 'Itemized Cash Log',
 
@@ -171,6 +206,7 @@ export const translations = {
     revenue: 'سجل الإيرادات',
     insights: 'تحليلات الموظفين',
     apartmentRevenue: 'إيرادات الشقق',
+    brokers: 'الوسطاء والعمولات',
 
     // Common Actions & Buttons
     newBooking: 'حجز جديد',
@@ -178,6 +214,8 @@ export const translations = {
     addApartment: 'إضافة شقة',
     addExpense: 'تسجيل مصروف',
     addRevenue: 'تسجيل إيراد',
+    addBroker: 'إضافة وسيط',
+    recordPayout: 'صرف عمولة / مستحقات',
     delivery: 'تسليم المفتاح (ديلفري)',
     receiver: 'استلام المفتاح (استرجاع)',
     edit: 'تعديل',
@@ -214,10 +252,32 @@ export const translations = {
     depositSource: 'عربون حجز',
     deliverySource: 'تسليم مفاتيح (ديلفري)',
     receiverReturnSource: 'إرجاع تأمين (استلام)',
+    brokerPayoutSource: 'صرف مستحقات وسيط',
     status: 'الحالة',
     selectApartment: 'اختر الشقة',
     selectGuest: 'اختر الموظف',
     userName: 'اسم الموظف',
+
+    // Broker & Commission Terms
+    broker: 'الوسيط (السمسار)',
+    noBrokerDirect: 'بدون وسيط (حجز مباشر)',
+    commissionPercentage: 'نسبة العمولة (%)',
+    brokerCommission: 'عمولة الوسيط ($)',
+    staffCommission: 'عمولة الموظف ($)',
+    defaultPercentage: 'النسبة الافتراضية (%)',
+    totalCommissionEarned: 'إجمالي العمولة المستحقة',
+    outstandingBalance: 'الرصيد المتبقي للوسيط',
+    totalPayouts: 'إجمالي المدفوعات للوسيط',
+    payoutAmount: 'مبلغ الدفعة ($)',
+    payoutNote: 'ملاحظة / مرجع الدفع',
+
+    // Staff Accounting Terms
+    totalCashCollected: 'إجمالي المقبوضات النقدية',
+    totalCashPaidOut: 'إجمالي المدفوعات النقدية',
+    currentCashInHand: 'النقدية الفعلية في الذمة (الدرج)',
+    staffCommissionEarned: 'العمولة المحتفظ بها مقدمًا',
+    brokerCommissionsHandled: 'عمولات الوسطاء المستقطعة',
+    netOwedToCompany: 'الصافي المستحق للشركة',
 
     // Time Filters
     allTime: 'التراكمي الكلي',
@@ -257,6 +317,16 @@ export const translations = {
     apartmentHistory: 'سجل حجوزات',
     noHistoryApartment: 'لا توجد حجوزات مسجلة لهذه الشقة.',
 
+    // Brokers Page
+    brokersTitle: 'الوسطاء والعمولات',
+    brokersSubtitle: 'إدارة وسطاء العقارات، حساب العمولات، الصرف، والأرصدة المتبقية.',
+    brokerName: 'اسم الوسيط',
+    addNewBroker: 'إضافة وسيط جديد',
+    editBroker: 'تعديل بيانات الوسيط',
+    noBrokersFound: 'لم يتم تسجيل وسطاء. انقر على "إضافة وسيط" للبدء.',
+    recordBrokerPayout: 'تسجيل دفعة للوسيط',
+    reservationsBrought: 'الحجوزات التابعة للوسيط',
+
     // Reservations Page
     reservationsTitle: 'الحجوزات وتسليم المفاتيح',
     reservationsSubtitle: 'إدارة حجوزات العملاء، الاتصال المباشر، تسليم المفتاح، واستلام الوحدة.',
@@ -295,15 +365,15 @@ export const translations = {
 
     // Expenses Page
     expensesTitle: 'سجل المصروفات النقدية',
-    expensesSubtitle: 'متابعة التكاليف اليدوية وتأمينات المرتجعات التلقائية لكل موظف.',
+    expensesSubtitle: 'متابعة التكاليف اليدوية وتأمينات المرتجعات ودفعات الوسطاء.',
 
     // Revenue Page
     revenueLogsTitle: 'سجل المقبوضات النقدية',
     revenueLogsSubtitle: 'متابعة الإيرادات اليدوية، العربون، ومقبوضات التسليم لكل موظف.',
 
     // Insights Page
-    insightsTitle: 'تحليلات التدفق النقدي للموظفين',
-    insightsSubtitle: 'حساب صافي النقدية (المقبوضات − المصروفات) والسجل التفصيلي لكل موظف.',
+    insightsTitle: 'تحليلات التدفق النقدي ومستحقات الموظفين',
+    insightsSubtitle: 'فصل نقدية الدرج الفعلية عن عمولات الموظفين والصافي المستحق للشركة.',
     earnedHandled: 'صافي النقدية في ذمة الموظف',
     itemizedBreakdown: 'السجل النقدي التفصيلي',
 

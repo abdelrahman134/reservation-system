@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import Revenue from '@/lib/models/Revenue';
 import Expense from '@/lib/models/Expense';
+import Reservation from '@/lib/models/Reservation';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,33 +29,57 @@ export async function GET(req: NextRequest) {
       if (toDate) dateQuery.createdAt.$lte = new Date(toDate);
     }
 
+    const resDateQuery: any = {};
+    if (fromDate || toDate) {
+      resDateQuery.startDate = {};
+      if (fromDate) resDateQuery.startDate.$gte = new Date(fromDate);
+      if (toDate) resDateQuery.startDate.$lte = new Date(toDate);
+    }
+
     const insights = await Promise.all(
       staffList.map(async (staff: any) => {
         const revQuery = { user: staff._id, isActive: true, ...dateQuery };
         const expQuery = { user: staff._id, isActive: true, ...dateQuery };
+        const reservationQuery = {
+          createdByStaff: staff._id,
+          isActive: true,
+          status: { $ne: 'cancelled' },
+          ...resDateQuery,
+        };
 
-        const revenues = await Revenue.find(revQuery)
-          .populate('reservation')
-          .sort({ createdAt: -1 })
-          .lean();
+        const [revenues, expenses, reservations] = await Promise.all([
+          Revenue.find(revQuery).populate('reservation').sort({ createdAt: -1 }).lean(),
+          Expense.find(expQuery).populate('reservation').populate('broker').sort({ createdAt: -1 }).lean(),
+          Reservation.find(reservationQuery).lean(),
+        ]);
 
-        const expenses = await Expense.find(expQuery)
-          .populate('reservation')
-          .sort({ createdAt: -1 })
-          .lean();
+        const totalCashCollected = revenues.reduce((acc, r) => acc + (r.value || 0), 0);
+        const totalCashPaidOut = expenses.reduce((acc, e) => acc + (e.value || 0), 0);
+        
+        // Since staff commission is deducted upfront when revenue is logged,
+        // Net Owed to Company is simply Total Cash Collected minus Total Cash Paid Out.
+        const netOwedToCompany = totalCashCollected - totalCashPaidOut;
 
-        const totalRevenue = revenues.reduce((acc, r) => acc + (r.value || 0), 0);
-        const totalExpense = expenses.reduce((acc, e) => acc + (e.value || 0), 0);
-        const netCash = totalRevenue - totalExpense;
+        const staffCommissionEarned = reservations.reduce(
+          (acc, r) => acc + (r.staffCommissionAmount || 0),
+          0
+        );
+        const brokerCommissionsHandled = reservations.reduce(
+          (acc, r) => acc + (r.brokerCommissionAmount || 0),
+          0
+        );
 
         return {
           staff: {
             _id: staff._id.toString(),
             name: staff.name,
           },
-          totalRevenue,
-          totalExpense,
-          netCash,
+          totalCashCollected,
+          totalCashPaidOut,
+          currentCashInHand: netOwedToCompany,
+          staffCommissionEarned,
+          brokerCommissionsHandled,
+          netOwedToCompany,
           revenues: revenues.map((r: any) => ({
             ...r,
             _id: r._id.toString(),

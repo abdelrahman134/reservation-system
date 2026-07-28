@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { UserCheck, TrendingUp, TrendingDown, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { UserCheck, TrendingUp, TrendingDown, ChevronDown, ChevronUp, AlertCircle, DollarSign, Wallet, Percent, Building } from 'lucide-react';
 import { format } from 'date-fns';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import DateRangeFilter, { DateFilterValue } from '@/components/DateRangeFilter';
@@ -11,9 +11,12 @@ interface StaffInsightItem {
     _id: string;
     name: string;
   };
-  totalRevenue: number;
-  totalExpense: number;
-  netCash: number;
+  totalCashCollected: number;
+  totalCashPaidOut: number;
+  currentCashInHand: number;
+  staffCommissionEarned: number;
+  brokerCommissionsHandled: number;
+  netOwedToCompany: number;
   revenues: Array<{
     _id: string;
     name: string;
@@ -27,6 +30,7 @@ interface StaffInsightItem {
     value: number;
     source: string;
     createdAt: string;
+    broker?: { name: string };
   }>;
 }
 
@@ -118,7 +122,7 @@ export default function InsightsPage() {
       )}
 
       {/* Staff Insights Cards */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {(!insights || insights.length === 0) ? (
           <div className="text-center py-12 text-slate-500 text-sm glass-card rounded-2xl">
             No staff financial records found.
@@ -126,71 +130,99 @@ export default function InsightsPage() {
         ) : (
           insights.map((item) => {
             const isExpanded = expandedStaffId === item.staff._id;
-            const isPositive = (item.netCash || 0) >= 0;
             const revList = item.revenues || [];
             const expList = item.expenses || [];
 
             return (
-              <div key={item.staff._id} className="glass-card rounded-2xl p-6 transition-all">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                  <div className="flex items-center space-x-3 rtl:space-x-reverse">
-                    <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 font-bold text-lg flex items-center justify-center">
-                      {item.staff?.name?.charAt(0) || 'S'}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-900">{item.staff?.name || 'Staff Member'}</h3>
-                      <span className="text-xs text-slate-500">{t('staffMember')}</span>
-                    </div>
+              <div key={item.staff._id} className="glass-card rounded-2xl p-6 transition-all space-y-5">
+                {/* Staff Header */}
+                <div className="flex items-center space-x-3 rtl:space-x-reverse border-b border-slate-100 pb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 font-bold text-lg flex items-center justify-center">
+                    {item.staff?.name?.charAt(0) || 'S'}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">{item.staff?.name || 'Staff Member'}</h3>
+                    <span className="text-xs text-slate-500">{t('staffMember')}</span>
+                  </div>
+                </div>
+
+                {/* Accounting Metrics Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
+                      {t('totalCashCollected')}
+                    </span>
+                    <p className="text-sm font-bold text-emerald-600 mt-1">
+                      +${(item.totalCashCollected || 0).toLocaleString()}
+                    </p>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4 sm:gap-6 text-center sm:text-right rtl:sm:text-left">
-                    <div>
-                      <span className="text-[11px] font-semibold text-slate-500 uppercase">
-                        {t('totalRevenue')}
-                      </span>
-                      <p className="text-sm font-bold text-emerald-600 mt-0.5">
-                        +${(item.totalRevenue || 0).toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-semibold text-slate-500 uppercase">
-                        {t('totalExpenses')}
-                      </span>
-                      <p className="text-sm font-bold text-rose-600 mt-0.5">
-                        -${(item.totalExpense || 0).toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-semibold text-slate-500 uppercase">
-                        {t('earnedHandled')}
-                      </span>
-                      <p className={`text-base font-extrabold mt-0.5 ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        ${(item.netCash || 0).toLocaleString()}
-                      </p>
-                    </div>
+                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
+                      {t('totalCashPaidOut')}
+                    </span>
+                    <p className="text-sm font-bold text-rose-600 mt-1">
+                      -${(item.totalCashPaidOut || 0).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div className="bg-blue-50/70 p-3.5 rounded-xl border border-blue-100">
+                    <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider block">
+                      {t('currentCashInHand')}
+                    </span>
+                    <p className="text-sm font-extrabold text-blue-700 mt-1">
+                      ${(item.currentCashInHand || 0).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div className="bg-amber-50/70 p-3.5 rounded-xl border border-amber-100">
+                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
+                      {t('staffCommissionEarned')}
+                    </span>
+                    <p className="text-sm font-extrabold text-amber-600 mt-1">
+                      ${(item.staffCommissionEarned || 0).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div className="bg-purple-50/70 p-3.5 rounded-xl border border-purple-100">
+                    <span className="text-[10px] font-bold text-purple-800 uppercase tracking-wider block">
+                      {t('brokerCommissionsHandled')}
+                    </span>
+                    <p className="text-sm font-extrabold text-purple-600 mt-1">
+                      ${(item.brokerCommissionsHandled || 0).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div className="bg-gradient-to-tr from-emerald-600 to-teal-600 text-white p-3.5 rounded-xl shadow-sm">
+                    <span className="text-[10px] font-bold text-emerald-100 uppercase tracking-wider block">
+                      {t('netOwedToCompany')}
+                    </span>
+                    <p className="text-base font-black mt-1">
+                      ${(item.netOwedToCompany || 0).toLocaleString()}
+                    </p>
                   </div>
                 </div>
 
                 {/* Expand Toggle */}
-                <div className="pt-3 flex items-center justify-between">
+                <div className="pt-2 flex items-center justify-between">
                   <button
                     onClick={() => setExpandedStaffId(isExpanded ? null : item.staff._id)}
                     className="inline-flex items-center space-x-1.5 rtl:space-x-reverse text-xs font-semibold text-purple-600 hover:text-purple-800 transition-colors"
                   >
-                    <span>{isExpanded ? 'Hide Itemized Breakdown' : t('itemizedBreakdown')}</span>
+                    <span>{isExpanded ? 'Hide Itemized Audit Trail' : t('itemizedBreakdown')}</span>
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
 
                   <span className="text-xs text-slate-400">
-                    {revList.length + expList.length} entries on record
+                    {revList.length + expList.length} cash entries on record
                   </span>
                 </div>
 
                 {/* Expandable Breakdown Table */}
                 {isExpanded && (
-                  <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                  <div className="pt-2 border-t border-slate-100 space-y-3">
                     <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Revenue &amp; Expense Audit Trail
+                      Itemized Cash Audit Trail (Revenues &amp; Expenses)
                     </h4>
 
                     <div className="space-y-2 max-h-80 overflow-y-auto pr-1">

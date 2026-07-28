@@ -5,9 +5,9 @@ import Reservation from '@/lib/models/Reservation';
 import Revenue from '@/lib/models/Revenue';
 import User from '@/lib/models/User';
 import Apartment from '@/lib/models/Apartment';
+import Broker from '@/lib/models/Broker';
 import { reservationSchema } from '@/lib/validations';
 
-// Normalize date to UTC Midday (12:00:00.000Z) to prevent day-shifting across timezones
 function normalizeDate(d: Date): Date {
   const normalized = new Date(d);
   normalized.setUTCHours(12, 0, 0, 0);
@@ -22,15 +22,23 @@ export async function GET(req: NextRequest) {
     const apartment = searchParams.get('apartment');
     const user = searchParams.get('user');
     const status = searchParams.get('status');
+    const fromDate = searchParams.get('fromDate');
+    const toDate = searchParams.get('toDate');
 
     const filter: any = { isActive: true };
     if (apartment) filter.apartment = apartment;
     if (user) filter.createdByStaff = user;
     if (status) filter.status = status;
+    if (fromDate || toDate) {
+      filter.startDate = {};
+      if (fromDate) filter.startDate.$gte = new Date(fromDate);
+      if (toDate) filter.startDate.$lte = new Date(toDate);
+    }
 
     const reservations = await Reservation.find(filter)
       .populate('createdByStaff', 'name')
       .populate('apartment', 'name')
+      .populate('broker', 'name defaultPercentage')
       .sort({ startDate: -1 });
 
     return NextResponse.json(reservations);
@@ -60,6 +68,8 @@ export async function POST(req: NextRequest) {
       clientPhone,
       apartment,
       createdByStaff,
+      broker,
+      commissionPercentage: rawCommPerc,
       startDate: rawStart,
       endDate: rawEnd,
       pricePerDay,
@@ -75,6 +85,21 @@ export async function POST(req: NextRequest) {
     const diffTime = endDate.getTime() - startDate.getTime();
     const nights = Math.max(1, Math.round(diffTime / (1000 * 3600 * 24)));
     const totalValue = pricePerDay * nights;
+
+    // Calculate Commission Amounts
+    const hasBroker = !!broker && broker.trim() !== '' && broker !== 'none';
+    const commPerc = rawCommPerc !== undefined ? rawCommPerc : (hasBroker ? 15 : 10);
+
+    let brokerCommissionAmount = 0;
+    let staffCommissionAmount = 0;
+
+    if (hasBroker) {
+      brokerCommissionAmount = (totalValue * commPerc) / 100;
+      staffCommissionAmount = 0;
+    } else {
+      staffCommissionAmount = (totalValue * commPerc) / 100;
+      brokerCommissionAmount = 0;
+    }
 
     // Check staff & apartment validity
     const staff = await User.findById(createdByStaff);
@@ -103,7 +128,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Attempt Mongoose Atomic Session Transaction
     let session: mongoose.ClientSession | null = null;
     let newReservation;
 
@@ -118,6 +142,10 @@ export async function POST(req: NextRequest) {
             clientPhone,
             apartment,
             createdByStaff,
+            broker: hasBroker ? broker : null,
+            commissionPercentage: commPerc,
+            brokerCommissionAmount,
+            staffCommissionAmount,
             startDate,
             endDate,
             pricePerDay,
@@ -131,7 +159,6 @@ export async function POST(req: NextRequest) {
       );
       newReservation = resDoc;
 
-      // Auto-create Revenue entry for deposit if deposit > 0
       if (deposit > 0) {
         await Revenue.create(
           [
@@ -155,12 +182,16 @@ export async function POST(req: NextRequest) {
         await session.abortTransaction();
         session.endSession();
       }
-      // Fallback non-transaction write if standalone Mongo (no replica set enabled)
+
       newReservation = await Reservation.create({
         clientName,
         clientPhone,
         apartment,
         createdByStaff,
+        broker: hasBroker ? broker : null,
+        commissionPercentage: commPerc,
+        brokerCommissionAmount,
+        staffCommissionAmount,
         startDate,
         endDate,
         pricePerDay,
@@ -182,7 +213,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const populated = await newReservation.populate(['apartment', 'createdByStaff']);
+    const populated = await newReservation.populate(['apartment', 'createdByStaff', 'broker']);
     return NextResponse.json(populated, { status: 201 });
   } catch (error: any) {
     return NextResponse.json(

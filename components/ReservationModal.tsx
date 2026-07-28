@@ -15,12 +15,20 @@ interface ApartmentOption {
   name: string;
 }
 
+interface BrokerOption {
+  _id: string;
+  name: string;
+  defaultPercentage: number;
+}
+
 export interface ReservationData {
   _id?: string;
   clientName: string;
   clientPhone: string;
   apartment: string;
   createdByStaff: string;
+  broker?: string | null;
+  commissionPercentage?: number;
   startDate: string;
   endDate: string;
   pricePerDay: number;
@@ -46,11 +54,14 @@ export default function ReservationModal({
   const { t } = useLanguage();
   const isEdit = !!initialData?._id;
 
+  const [brokers, setBrokers] = useState<BrokerOption[]>([]);
   const [formData, setFormData] = useState({
     clientName: initialData?.clientName || '',
     clientPhone: initialData?.clientPhone || '',
     apartment: initialData?.apartment || apartments[0]?._id || '',
     createdByStaff: initialData?.createdByStaff || staffList[0]?._id || '',
+    broker: initialData?.broker || 'none',
+    commissionPercentage: initialData?.commissionPercentage?.toString() || '10',
     startDate: initialData?.startDate
       ? format(new Date(initialData.startDate), 'yyyy-MM-dd')
       : format(new Date(), 'yyyy-MM-dd'),
@@ -65,12 +76,45 @@ export default function ReservationModal({
   const [errorAlert, setErrorAlert] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    fetch('/api/brokers')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setBrokers(data);
+      })
+      .catch((err) => console.error('Failed to load brokers:', err));
+  }, []);
+
+  const handleBrokerChange = (selectedBrokerId: string) => {
+    if (selectedBrokerId === 'none') {
+      setFormData((prev) => ({
+        ...prev,
+        broker: 'none',
+        commissionPercentage: '10',
+      }));
+    } else {
+      const found = brokers.find((b) => b._id === selectedBrokerId);
+      const defaultPerc = found ? found.defaultPercentage.toString() : '15';
+      setFormData((prev) => ({
+        ...prev,
+        broker: selectedBrokerId,
+        commissionPercentage: defaultPerc,
+      }));
+    }
+  };
+
   const calculateLiveTotal = () => {
     const price = parseFloat(formData.pricePerDay) || 0;
     const start = new Date(formData.startDate);
     const end = new Date(formData.endDate);
     const nights = Math.max(1, differenceInDays(end, start));
     return price * nights;
+  };
+
+  const calculateCommissionPreview = () => {
+    const total = calculateLiveTotal();
+    const perc = parseFloat(formData.commissionPercentage) || 0;
+    return (total * perc) / 100;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,6 +127,8 @@ export default function ReservationModal({
       clientPhone: formData.clientPhone.trim(),
       apartment: formData.apartment,
       createdByStaff: formData.createdByStaff,
+      broker: formData.broker === 'none' ? null : formData.broker,
+      commissionPercentage: parseFloat(formData.commissionPercentage) || 0,
       startDate: formData.startDate,
       endDate: formData.endDate,
       pricePerDay: parseFloat(formData.pricePerDay) || 0,
@@ -199,6 +245,45 @@ export default function ReservationModal({
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Broker and Commission Settings */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                {t('broker')}
+              </label>
+              <select
+                value={formData.broker}
+                onChange={(e) => handleBrokerChange(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 text-sm font-medium bg-white"
+              >
+                <option value="none">{t('noBrokerDirect')}</option>
+                {brokers.map((b) => (
+                  <option key={b._id} value={b._id}>
+                    {b.name} ({b.defaultPercentage}%)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                {t('commissionPercentage')}
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                required
+                value={formData.commissionPercentage}
+                onChange={(e) => setFormData({ ...formData, commissionPercentage: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-semibold bg-white"
+              />
+              <span className="text-[10px] text-slate-500 mt-0.5 block">
+                Preview: ${calculateCommissionPreview()} ({formData.broker === 'none' ? 'Staff' : 'Broker'})
+              </span>
             </div>
           </div>
 

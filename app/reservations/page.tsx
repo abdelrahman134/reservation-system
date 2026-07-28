@@ -77,10 +77,12 @@ export default function ReservationsPage() {
         fetch('/api/users').then((r) => r.json()),
         fetch('/api/apartments').then((r) => r.json()),
       ]);
-      setStaffList(resUsers);
-      setApartments(resApartments);
+      setStaffList(Array.isArray(resUsers) ? resUsers : []);
+      setApartments(Array.isArray(resApartments) ? resApartments : []);
     } catch (err) {
       console.error(err);
+      setStaffList([]);
+      setApartments([]);
     }
   };
 
@@ -96,9 +98,10 @@ export default function ReservationsPage() {
 
       const res = await fetch(`/api/reservations?${query.toString()}`);
       const data = await res.json();
-      setReservations(data);
+      setReservations(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setReservations([]);
     } finally {
       setLoading(false);
     }
@@ -148,13 +151,15 @@ export default function ReservationsPage() {
     }
   };
 
-  const filteredReservations = reservations.filter((r) => {
+  const safeReservationsList = Array.isArray(reservations) ? reservations : [];
+
+  const filteredReservations = safeReservationsList.filter((r) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
-      r.clientName.toLowerCase().includes(q) ||
-      r.clientPhone.toLowerCase().includes(q) ||
-      r.apartment?.name.toLowerCase().includes(q)
+      (r.clientName && r.clientName.toLowerCase().includes(q)) ||
+      (r.clientPhone && r.clientPhone.toLowerCase().includes(q)) ||
+      (r.apartment?.name && r.apartment.name.toLowerCase().includes(q))
     );
   });
 
@@ -288,8 +293,8 @@ export default function ReservationsPage() {
                       {res.apartment?.name || 'Apartment'}
                     </td>
                     <td className="px-4 py-4 text-slate-600 text-xs">
-                      {format(new Date(res.startDate), 'MMM dd')} &rarr;{' '}
-                      {format(new Date(res.endDate), 'MMM dd, yyyy')}
+                      {res.startDate ? format(new Date(res.startDate), 'MMM dd') : ''} &rarr;{' '}
+                      {res.endDate ? format(new Date(res.endDate), 'MMM dd, yyyy') : ''}
                     </td>
                     <td className="px-4 py-4 font-medium text-slate-700">
                       ${res.pricePerDay}

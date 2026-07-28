@@ -4,8 +4,9 @@ export interface IExpense extends Document {
   name: string;
   value: number;
   user: mongoose.Types.ObjectId;
-  source: 'manual' | 'receiver-return';
+  source: 'manual' | 'receiver-return' | 'broker-payout';
   reservation?: mongoose.Types.ObjectId;
+  broker?: mongoose.Types.ObjectId;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -30,12 +31,16 @@ const ExpenseSchema: Schema<IExpense> = new Schema(
     },
     source: {
       type: String,
-      enum: ['manual', 'receiver-return'],
+      enum: ['manual', 'receiver-return', 'broker-payout'],
       default: 'manual',
     },
     reservation: {
       type: Schema.Types.ObjectId,
       ref: 'Reservation',
+    },
+    broker: {
+      type: Schema.Types.ObjectId,
+      ref: 'Broker',
     },
     isActive: {
       type: Boolean,
