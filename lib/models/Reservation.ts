@@ -1,4 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import './User';
+import './Apartment';
+import './Broker';
 
 export interface IReservation extends Document {
   clientName: string;

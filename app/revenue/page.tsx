@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Wallet, Plus, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -21,6 +22,7 @@ interface RevenueItem {
 }
 
 export default function RevenuePage() {
+  const router = useRouter();
   const [revenues, setRevenues] = useState<RevenueItem[]>([]);
   const [staffList, setStaffList] = useState<StaffUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,15 +49,16 @@ export default function RevenuePage() {
       if (dateFilter.toDate) query.append('toDate', dateFilter.toDate);
 
       const [resRev, resStaff] = await Promise.all([
-        fetch(`/api/revenue?${query.toString()}`).then((r) => r.json()),
-        fetch('/api/users').then((r) => r.json()),
+        fetch(`/api/revenue?${query.toString()}`, { cache: 'no-store' }).then((r) => r.json()),
+        fetch('/api/users', { cache: 'no-store' }).then((r) => r.json()),
       ]);
-      setRevenues(resRev);
-      setStaffList(resStaff);
-      if (resStaff.length > 0 && !selectedStaff) setSelectedStaff(resStaff[0]._id);
+      setRevenues(Array.isArray(resRev) ? resRev : []);
+      setStaffList(Array.isArray(resStaff) ? resStaff : []);
+      if (Array.isArray(resStaff) && resStaff.length > 0 && !selectedStaff) setSelectedStaff(resStaff[0]._id);
     } catch (err) {
       console.error(err);
-    } finally {
+      setRevenues([]);
+    } fontally: {
       setLoading(false);
     }
   };
@@ -81,6 +84,7 @@ export default function RevenuePage() {
           user: selectedStaff,
           source: 'manual',
         }),
+        cache: 'no-store',
       });
 
       const data = await res.json();
@@ -91,6 +95,7 @@ export default function RevenuePage() {
       setNameInput('');
       setValueInput('');
       setIsModalOpen(false);
+      router.refresh();
       fetchInitialData();
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -99,7 +104,8 @@ export default function RevenuePage() {
     }
   };
 
-  const totalRevenueSum = revenues.reduce((acc, r) => acc + r.value, 0);
+  const safeRevenues = Array.isArray(revenues) ? revenues : [];
+  const totalRevenueSum = safeRevenues.reduce((acc, r) => acc + (r.value || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -145,7 +151,7 @@ export default function RevenuePage() {
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
-        ) : revenues.length === 0 ? (
+        ) : safeRevenues.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-sm">
             No revenue entries logged for selected period.
           </div>
@@ -166,11 +172,11 @@ export default function RevenuePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {revenues.map((item) => (
+                {safeRevenues.map((item) => (
                   <tr key={item._id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-4 font-semibold text-slate-900">{item.name}</td>
                     <td className="px-4 py-4 font-bold text-emerald-600">
-                      ${item.value.toLocaleString()}
+                      ${(item.value || 0).toLocaleString()}
                     </td>
                     <td className="px-4 py-4 text-slate-700 font-medium">
                       {item.user?.name || 'Staff'}
@@ -193,7 +199,7 @@ export default function RevenuePage() {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-slate-500 text-xs">
-                      {format(new Date(item.createdAt), 'MMM dd, yyyy HH:mm')}
+                      {item.createdAt ? format(new Date(item.createdAt), 'MMM dd, yyyy HH:mm') : ''}
                     </td>
                   </tr>
                 ))}

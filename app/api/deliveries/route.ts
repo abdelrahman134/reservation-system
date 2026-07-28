@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Delivery from '@/lib/models/Delivery';
@@ -50,9 +51,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Reservation not found' }, { status: 404 });
     }
 
-    // Upfront Commission Deduction Logic:
-    // If staff commission applies, deduct it upfront from logged revenue value.
-    // If broker commission applies, log full totalValue (broker is paid later via broker-payout expense).
     const staffComm = reservationDoc.staffCommissionAmount || 0;
     const netRevenueValue = staffComm > 0 ? Math.max(0, totalValue - staffComm) : totalValue;
 
@@ -160,6 +158,11 @@ export async function POST(req: NextRequest) {
         });
       }
     }
+
+    revalidatePath('/reservations');
+    revalidatePath('/calendar');
+    revalidatePath('/insights');
+    revalidatePath('/revenue');
 
     const populated = await deliveryDoc.populate(['staffUser', 'reservation']);
     return NextResponse.json(populated, { status: existingDelivery ? 200 : 201 });

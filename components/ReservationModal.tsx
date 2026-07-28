@@ -77,7 +77,7 @@ export default function ReservationModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    fetch('/api/brokers')
+    fetch('/api/brokers', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setBrokers(data);
@@ -144,6 +144,7 @@ export default function ReservationModal({
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        cache: 'no-store',
       });
 
       const data = await res.json();

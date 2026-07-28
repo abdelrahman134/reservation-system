@@ -15,10 +15,11 @@ interface ApartmentItem {
 
 interface ApartmentReservation {
   _id: string;
-  user: { name: string };
+  clientName: string;
+  clientPhone: string;
   startDate: string;
   endDate: string;
-  value: number;
+  totalValue: number;
   status: string;
 }
 
@@ -34,7 +35,7 @@ export default function ApartmentsPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Detail Modal state
+  // History modal state
   const [selectedApartmentHistory, setSelectedApartmentHistory] = useState<{
     apartment: ApartmentItem;
     reservations: ApartmentReservation[];
@@ -43,12 +44,13 @@ export default function ApartmentsPage() {
 
   const fetchApartments = async () => {
     try {
-      const res = await fetch('/api/apartments');
+      const res = await fetch('/api/apartments', { cache: 'no-store' });
       const data = await res.json();
-      setApartments(data);
+      setApartments(Array.isArray(data) ? data : []);
       setLoading(false);
     } catch (err) {
       console.error(err);
+      setApartments([]);
       setLoading(false);
     }
   };
@@ -69,11 +71,12 @@ export default function ApartmentsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: nameInput.trim() }),
+        cache: 'no-store',
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to create apartment');
+        throw new Error(data.error || 'Failed to add apartment');
       }
 
       setNameInput('');
@@ -98,6 +101,7 @@ export default function ApartmentsPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: nameInput.trim() }),
+        cache: 'no-store',
       });
 
       const data = await res.json();
@@ -115,16 +119,17 @@ export default function ApartmentsPage() {
     }
   };
 
-  const handleDelete = async (apt: ApartmentItem) => {
-    const confirmMessage = apt.reservationCount > 0
-      ? `Apartment "${apt.name}" has ${apt.reservationCount} associated reservation(s). Soft-deleting will preserve historical revenue reports. Proceed?`
-      : `Are you sure you want to delete apartment "${apt.name}"?`;
+  const handleDelete = async (apartment: ApartmentItem) => {
+    const confirmMessage = apartment.reservationCount > 0
+      ? `Apartment "${apartment.name}" has ${apartment.reservationCount} reservation(s). Deleting will soft-delete the apartment while preserving historical revenue records. Proceed?`
+      : `Are you sure you want to delete apartment "${apartment.name}"?`;
 
     if (!confirm(confirmMessage)) return;
 
     try {
-      const res = await fetch(`/api/apartments/${apt._id}`, {
+      const res = await fetch(`/api/apartments/${apartment._id}`, {
         method: 'DELETE',
+        cache: 'no-store',
       });
       if (res.ok) {
         fetchApartments();
@@ -134,16 +139,17 @@ export default function ApartmentsPage() {
     }
   };
 
-  const handleViewHistory = async (apt: ApartmentItem) => {
+  const handleViewHistory = async (apartment: ApartmentItem) => {
     setLoadingHistory(true);
-    setSelectedApartmentHistory({ apartment: apt, reservations: [] });
+    setSelectedApartmentHistory({ apartment, reservations: [] });
 
     try {
-      const res = await fetch(`/api/reservations?apartment=${apt._id}`);
+      const res = await fetch(`/api/reservations?apartment=${apartment._id}`, { cache: 'no-store' });
       const data = await res.json();
-      setSelectedApartmentHistory({ apartment: apt, reservations: data });
+      setSelectedApartmentHistory({ apartment, reservations: Array.isArray(data) ? data : [] });
     } catch (err) {
       console.error(err);
+      setSelectedApartmentHistory({ apartment, reservations: [] });
     } finally {
       setLoadingHistory(false);
     }
@@ -157,13 +163,15 @@ export default function ApartmentsPage() {
     );
   }
 
+  const safeApartments = Array.isArray(apartments) ? apartments : [];
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <Building2 className="w-8 h-8 text-amber-600" /> {t('apartmentsTitle')}
+            <Building2 className="w-8 h-8 text-blue-600" /> {t('apartmentsTitle')}
           </h1>
           <p className="text-slate-500 text-sm mt-1">{t('apartmentsSubtitle')}</p>
         </div>
@@ -182,7 +190,7 @@ export default function ApartmentsPage() {
 
       {/* Apartments Table */}
       <div className="glass-card rounded-2xl p-6">
-        {apartments.length === 0 ? (
+        {safeApartments.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-sm">
             {t('noApartmentsFound')}
           </div>
@@ -203,26 +211,23 @@ export default function ApartmentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {apartments.map((apt) => (
-                  <tr key={apt._id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-4 font-semibold text-slate-900 flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-slate-400" />
-                      <span>{apt.name}</span>
-                    </td>
+                {safeApartments.map((apartment) => (
+                  <tr key={apartment._id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-4 font-semibold text-slate-900">{apartment.name}</td>
                     <td className="px-4 py-4 text-slate-600">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
-                        {apt.reservationCount}
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                        {apartment.reservationCount}
                       </span>
                     </td>
                     <td className="px-4 py-4 font-bold text-emerald-600">
-                      ${apt.totalValue.toLocaleString()}
+                      ${apartment.totalValue.toLocaleString()}
                     </td>
                     <td className="px-4 py-4 text-slate-500 text-xs">
-                      {format(new Date(apt.createdAt), 'MMM dd, yyyy')}
+                      {apartment.createdAt ? format(new Date(apartment.createdAt), 'MMM dd, yyyy') : ''}
                     </td>
                     <td className="px-4 py-4 text-right rtl:text-left space-x-2 rtl:space-x-reverse">
                       <button
-                        onClick={() => handleViewHistory(apt)}
+                        onClick={() => handleViewHistory(apartment)}
                         title="View History"
                         className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       >
@@ -230,8 +235,8 @@ export default function ApartmentsPage() {
                       </button>
                       <button
                         onClick={() => {
-                          setEditingApartment(apt);
-                          setNameInput(apt.name);
+                          setEditingApartment(apartment);
+                          setNameInput(apartment.name);
                           setErrorMsg('');
                         }}
                         title="Edit Apartment"
@@ -240,7 +245,7 @@ export default function ApartmentsPage() {
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(apt)}
+                        onClick={() => handleDelete(apartment)}
                         title="Delete Apartment"
                         className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                       >
@@ -276,7 +281,7 @@ export default function ApartmentsPage() {
                   required
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
-                  placeholder="e.g. Apartment 4B"
+                  placeholder="e.g. Sunset Luxury Suite #4"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
               </div>
@@ -370,7 +375,7 @@ export default function ApartmentsPage() {
             <div className="overflow-y-auto flex-1 py-2">
               {loadingHistory ? (
                 <div className="text-center py-8 text-slate-500">{t('saving')}</div>
-              ) : selectedApartmentHistory.reservations.length === 0 ? (
+              ) : !Array.isArray(selectedApartmentHistory.reservations) || selectedApartmentHistory.reservations.length === 0 ? (
                 <div className="text-center py-8 text-slate-500 text-sm">
                   {t('noHistoryApartment')}
                 </div>
@@ -383,19 +388,19 @@ export default function ApartmentsPage() {
                     >
                       <div>
                         <div className="font-semibold text-slate-900 text-sm">
-                          {res.user?.name || 'Guest'}
+                          {res.clientName} ({res.clientPhone})
                         </div>
                         <div className="text-xs text-slate-500 mt-1 flex items-center gap-2">
-                          <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                          <Calendar className="w-3.5 h-3.5 text-blue-600" />
                           <span>
-                            {format(new Date(res.startDate), 'MMM dd, yyyy')} -{' '}
-                            {format(new Date(res.endDate), 'MMM dd, yyyy')}
+                            {res.startDate ? format(new Date(res.startDate), 'MMM dd, yyyy') : ''} -{' '}
+                            {res.endDate ? format(new Date(res.endDate), 'MMM dd, yyyy') : ''}
                           </span>
                         </div>
                       </div>
                       <div className="text-right rtl:text-left">
                         <div className="font-bold text-emerald-600 text-sm">
-                          ${res.value.toLocaleString()}
+                          ${(res.totalValue || 0).toLocaleString()}
                         </div>
                         <span
                           className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold mt-1 uppercase ${

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Briefcase,
   Plus,
@@ -41,6 +42,7 @@ interface BrokerItem {
 }
 
 export default function BrokersPage() {
+  const router = useRouter();
   const [brokers, setBrokers] = useState<BrokerItem[]>([]);
   const [staffList, setStaffList] = useState<StaffUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,8 +78,8 @@ export default function BrokersPage() {
       if (dateFilter.toDate) query.append('toDate', dateFilter.toDate);
 
       const [resBrokers, resStaff] = await Promise.all([
-        fetch(`/api/brokers?${query.toString()}`).then((r) => r.json()),
-        fetch('/api/users').then((r) => r.json()),
+        fetch(`/api/brokers?${query.toString()}`, { cache: 'no-store' }).then((r) => r.json()),
+        fetch('/api/users', { cache: 'no-store' }).then((r) => r.json()),
       ]);
 
       setBrokers(Array.isArray(resBrokers) ? resBrokers : []);
@@ -131,6 +133,7 @@ export default function BrokersPage() {
           name: brokerName.trim(),
           defaultPercentage: parseFloat(defaultPercentage) || 0,
         }),
+        cache: 'no-store',
       });
 
       const data = await res.json();
@@ -141,6 +144,7 @@ export default function BrokersPage() {
       setIsBrokerModalOpen(false);
       setSuccessToast(editingBroker ? 'Broker updated!' : 'New Broker created!');
       setTimeout(() => setSuccessToast(''), 4000);
+      router.refresh();
       fetchInitialData();
     } catch (err: any) {
       setBrokerError(err.message);
@@ -152,10 +156,11 @@ export default function BrokersPage() {
   const handleDeleteBroker = async (id: string) => {
     if (!confirm('Soft-delete this broker?')) return;
     try {
-      const res = await fetch(`/api/brokers/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/brokers/${id}`, { method: 'DELETE', cache: 'no-store' });
       if (res.ok) {
         setSuccessToast('Broker soft-deleted!');
         setTimeout(() => setSuccessToast(''), 4000);
+        router.refresh();
         fetchInitialData();
       }
     } catch (err) {
@@ -189,6 +194,7 @@ export default function BrokersPage() {
           source: 'broker-payout',
           broker: payoutBroker._id,
         }),
+        cache: 'no-store',
       });
 
       const data = await res.json();
@@ -199,6 +205,7 @@ export default function BrokersPage() {
       setPayoutBroker(null);
       setSuccessToast(`Recorded $${val} payout to ${payoutBroker.name}!`);
       setTimeout(() => setSuccessToast(''), 4000);
+      router.refresh();
       fetchInitialData();
     } catch (err: any) {
       setPayoutError(err.message);
@@ -409,7 +416,7 @@ export default function BrokersPage() {
                               <div>
                                 <span className="font-bold text-slate-900">{r.clientName}</span>
                                 <span className="text-[10px] text-slate-400 ml-2 rtl:mr-2">
-                                  {format(new Date(r.startDate), 'MMM dd, yyyy')}
+                                  {r.startDate ? format(new Date(r.startDate), 'MMM dd, yyyy') : ''}
                                 </span>
                               </div>
 

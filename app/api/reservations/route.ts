@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Reservation from '@/lib/models/Reservation';
@@ -7,6 +8,8 @@ import User from '@/lib/models/User';
 import Apartment from '@/lib/models/Apartment';
 import Broker from '@/lib/models/Broker';
 import { reservationSchema } from '@/lib/validations';
+
+export const dynamic = 'force-dynamic';
 
 function normalizeDate(d: Date): Date {
   const normalized = new Date(d);
@@ -77,16 +80,13 @@ export async function POST(req: NextRequest) {
       status,
     } = validation.data;
 
-    // Timezone Midday UTC Normalization
     const startDate = normalizeDate(rawStart);
     const endDate = normalizeDate(rawEnd);
 
-    // Calculate nights & totalValue
     const diffTime = endDate.getTime() - startDate.getTime();
     const nights = Math.max(1, Math.round(diffTime / (1000 * 3600 * 24)));
     const totalValue = pricePerDay * nights;
 
-    // Calculate Commission Amounts
     const hasBroker = !!broker && broker.trim() !== '' && broker !== 'none';
     const commPerc = rawCommPerc !== undefined ? rawCommPerc : (hasBroker ? 15 : 10);
 
@@ -101,7 +101,6 @@ export async function POST(req: NextRequest) {
       brokerCommissionAmount = 0;
     }
 
-    // Check staff & apartment validity
     const staff = await User.findById(createdByStaff);
     if (!staff || !staff.isActive) {
       return NextResponse.json({ error: 'Selected Staff member is invalid' }, { status: 400 });
@@ -112,7 +111,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Selected Apartment is invalid' }, { status: 400 });
     }
 
-    // STRICT DATE OVERLAP CHECK
     const overlappingReservation = await Reservation.findOne({
       apartment,
       isActive: true,
@@ -212,6 +210,11 @@ export async function POST(req: NextRequest) {
         });
       }
     }
+
+    revalidatePath('/reservations');
+    revalidatePath('/calendar');
+    revalidatePath('/insights');
+    revalidatePath('/apartment-revenue');
 
     const populated = await newReservation.populate(['apartment', 'createdByStaff', 'broker']);
     return NextResponse.json(populated, { status: 201 });

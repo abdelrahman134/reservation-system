@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Reservation from '@/lib/models/Reservation';
 import Revenue from '@/lib/models/Revenue';
 import Expense from '@/lib/models/Expense';
 import { reservationSchema } from '@/lib/validations';
+
+export const dynamic = 'force-dynamic';
 
 export async function PATCH(
   req: NextRequest,
@@ -41,7 +44,6 @@ export async function PATCH(
       status,
     } = validation.data;
 
-    // Check for date overlap excluding current reservation
     if (status !== 'cancelled') {
       const overlappingReservation = await Reservation.findOne({
         _id: { $ne: params.id },
@@ -64,7 +66,6 @@ export async function PATCH(
     const nights = Math.max(1, Math.round(diffTime / (1000 * 3600 * 24)));
     const totalValue = pricePerDay * nights;
 
-    // Calculate Commission Amounts
     const hasBroker = !!broker && broker.trim() !== '' && broker !== 'none';
     const commPerc = rawCommPerc !== undefined ? rawCommPerc : (hasBroker ? 15 : 10);
 
@@ -102,7 +103,6 @@ export async function PATCH(
 
       await existing.save({ session });
 
-      // Synchronize associated Deposit Revenue entry if deposit amount changed
       await Revenue.findOneAndUpdate(
         { reservation: params.id, source: 'deposit' },
         { value: deposit, name: `Deposit — ${clientName}`, user: createdByStaff },
@@ -139,6 +139,11 @@ export async function PATCH(
         { value: deposit, name: `Deposit — ${clientName}`, user: createdByStaff }
       );
     }
+
+    revalidatePath('/reservations');
+    revalidatePath('/calendar');
+    revalidatePath('/insights');
+    revalidatePath('/apartment-revenue');
 
     const populated = await existing.populate(['createdByStaff', 'apartment', 'broker']);
     return NextResponse.json(populated);
@@ -212,6 +217,11 @@ export async function DELETE(
       await Revenue.updateMany({ reservation: params.id }, { isActive: false });
       await Expense.updateMany({ reservation: params.id }, { isActive: false });
     }
+
+    revalidatePath('/reservations');
+    revalidatePath('/calendar');
+    revalidatePath('/insights');
+    revalidatePath('/apartment-revenue');
 
     return NextResponse.json({
       message: 'Reservation and associated financial entries soft-deleted successfully',

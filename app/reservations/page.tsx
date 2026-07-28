@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   CalendarCheck2,
   Plus,
@@ -45,6 +46,7 @@ interface ReservationItem {
 }
 
 export default function ReservationsPage() {
+  const router = useRouter();
   const [reservations, setReservations] = useState<ReservationItem[]>([]);
   const [staffList, setStaffList] = useState<StaffOption[]>([]);
   const [apartments, setApartments] = useState<ApartmentOption[]>([]);
@@ -74,8 +76,8 @@ export default function ReservationsPage() {
   const fetchInitialData = async () => {
     try {
       const [resUsers, resApartments] = await Promise.all([
-        fetch('/api/users').then((r) => r.json()),
-        fetch('/api/apartments').then((r) => r.json()),
+        fetch('/api/users', { cache: 'no-store' }).then((r) => r.json()),
+        fetch('/api/apartments', { cache: 'no-store' }).then((r) => r.json()),
       ]);
       setStaffList(Array.isArray(resUsers) ? resUsers : []);
       setApartments(Array.isArray(resApartments) ? resApartments : []);
@@ -96,7 +98,7 @@ export default function ReservationsPage() {
       if (dateFilter.fromDate) query.append('fromDate', dateFilter.fromDate);
       if (dateFilter.toDate) query.append('toDate', dateFilter.toDate);
 
-      const res = await fetch(`/api/reservations?${query.toString()}`);
+      const res = await fetch(`/api/reservations?${query.toString()}`, { cache: 'no-store' });
       const data = await res.json();
       setReservations(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -140,10 +142,11 @@ export default function ReservationsPage() {
     if (!confirm('Soft-delete this reservation? This will soft-delete associated deposit, delivery, and return insurance entries to preserve data integrity.')) return;
 
     try {
-      const res = await fetch(`/api/reservations/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/reservations/${id}`, { method: 'DELETE', cache: 'no-store' });
       if (res.ok) {
         setSuccessToast('Reservation and linked financial entries soft-deleted!');
         setTimeout(() => setSuccessToast(''), 4000);
+        router.refresh();
         fetchReservations();
       }
     } catch (err) {
@@ -363,6 +366,7 @@ export default function ReservationsPage() {
           onSuccess={() => {
             setSuccessToast('Reservation saved successfully!');
             setTimeout(() => setSuccessToast(''), 4000);
+            router.refresh();
             fetchReservations();
           }}
         />
@@ -379,6 +383,7 @@ export default function ReservationsPage() {
           onSuccess={() => {
             setSuccessToast(t('deliverySuccess'));
             setTimeout(() => setSuccessToast(''), 4000);
+            router.refresh();
             fetchReservations();
           }}
         />
@@ -394,6 +399,7 @@ export default function ReservationsPage() {
           onSuccess={() => {
             setSuccessToast(t('receiverSuccess'));
             setTimeout(() => setSuccessToast(''), 4000);
+            router.refresh();
             fetchReservations();
           }}
         />

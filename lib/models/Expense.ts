@@ -1,4 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import './User';
+import './Reservation';
+import './Broker';
 
 export interface IExpense extends Document {
   name: string;

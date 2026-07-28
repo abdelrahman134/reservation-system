@@ -73,9 +73,9 @@ export default function CalendarPage() {
   const fetchData = async () => {
     try {
       const [apRes, usRes, resRes] = await Promise.all([
-        fetch('/api/apartments').then((r) => r.json()),
-        fetch('/api/users').then((r) => r.json()),
-        fetch('/api/reservations').then((r) => r.json()),
+        fetch('/api/apartments', { cache: 'no-store' }).then((r) => r.json()),
+        fetch('/api/users', { cache: 'no-store' }).then((r) => r.json()),
+        fetch('/api/reservations', { cache: 'no-store' }).then((r) => r.json()),
       ]);
 
       setApartments(Array.isArray(apRes) ? apRes : []);
@@ -86,7 +86,7 @@ export default function CalendarPage() {
       setApartments([]);
       setStaffList([]);
       setReservations([]);
-    } fontally: {
+    } finally {
       setLoading(false);
     }
   };

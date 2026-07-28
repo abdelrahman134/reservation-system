@@ -1,4 +1,12 @@
 import mongoose from 'mongoose';
+import '@/lib/models/User';
+import '@/lib/models/Apartment';
+import '@/lib/models/Broker';
+import '@/lib/models/Reservation';
+import '@/lib/models/Revenue';
+import '@/lib/models/Expense';
+import '@/lib/models/Delivery';
+import '@/lib/models/Receiver';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/apartment_reservation';
 

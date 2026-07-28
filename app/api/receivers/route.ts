@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Receiver from '@/lib/models/Receiver';
-import Delivery from '@/lib/models/Delivery';
 import Expense from '@/lib/models/Expense';
 import Reservation from '@/lib/models/Reservation';
 import { receiverSchema } from '@/lib/validations';
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     const receivers = await Receiver.find(filter).populate(['staffUser', 'reservation']).sort({ createdAt: -1 });
     return NextResponse.json(receivers);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to fetch receiver' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to fetch receiver returns' }, { status: 500 });
   }
 }
 
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
           {
             value: returnInsurance,
             user: staffUser,
-            name: `Insurance return — ${reservationDoc.clientName}`,
+            name: `Returned Insurance — ${reservationDoc.clientName}`,
             isActive: true,
           },
           { session, upsert: true }
@@ -89,11 +89,11 @@ export async function POST(req: NextRequest) {
         );
         receiverDoc = recDoc;
 
-        if (returnInsurance >= 0) {
+        if (returnInsurance > 0) {
           await Expense.create(
             [
               {
-                name: `Insurance return — ${reservationDoc.clientName}`,
+                name: `Returned Insurance — ${reservationDoc.clientName}`,
                 value: returnInsurance,
                 user: staffUser,
                 source: 'receiver-return',
@@ -104,12 +104,6 @@ export async function POST(req: NextRequest) {
             { session }
           );
         }
-      }
-
-      const deliveryExists = await Delivery.findOne({ reservation, isActive: true }).session(session);
-      if (deliveryExists) {
-        reservationDoc.status = 'completed';
-        await reservationDoc.save({ session });
       }
 
       await session.commitTransaction();
@@ -131,7 +125,7 @@ export async function POST(req: NextRequest) {
           {
             value: returnInsurance,
             user: staffUser,
-            name: `Insurance return — ${reservationDoc.clientName}`,
+            name: `Returned Insurance — ${reservationDoc.clientName}`,
             isActive: true,
           },
           { upsert: true }
@@ -144,9 +138,9 @@ export async function POST(req: NextRequest) {
           isActive: true,
         });
 
-        if (returnInsurance >= 0) {
+        if (returnInsurance > 0) {
           await Expense.create({
-            name: `Insurance return — ${reservationDoc.clientName}`,
+            name: `Returned Insurance — ${reservationDoc.clientName}`,
             value: returnInsurance,
             user: staffUser,
             source: 'receiver-return',
@@ -155,13 +149,12 @@ export async function POST(req: NextRequest) {
           });
         }
       }
-
-      const deliveryExists = await Delivery.findOne({ reservation, isActive: true });
-      if (deliveryExists) {
-        reservationDoc.status = 'completed';
-        await reservationDoc.save();
-      }
     }
+
+    revalidatePath('/reservations');
+    revalidatePath('/calendar');
+    revalidatePath('/insights');
+    revalidatePath('/expenses');
 
     const populated = await receiverDoc.populate(['staffUser', 'reservation']);
     return NextResponse.json(populated, { status: existingReceiver ? 200 : 201 });

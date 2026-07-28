@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { UserCheck, TrendingUp, TrendingDown, ChevronDown, ChevronUp, AlertCircle, DollarSign, Wallet, Percent, Building } from 'lucide-react';
+import { UserCheck, TrendingUp, TrendingDown, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import DateRangeFilter, { DateFilterValue } from '@/components/DateRangeFilter';
@@ -56,7 +56,7 @@ export default function InsightsPage() {
       if (dateFilter.fromDate) query.append('fromDate', dateFilter.fromDate);
       if (dateFilter.toDate) query.append('toDate', dateFilter.toDate);
 
-      const res = await fetch(`/api/insights?${query.toString()}`);
+      const res = await fetch(`/api/insights?${query.toString()}`, { cache: 'no-store' });
       const data = await res.json();
 
       if (!res.ok) {
@@ -85,6 +85,8 @@ export default function InsightsPage() {
     );
   }
 
+  const safeInsights = Array.isArray(insights) ? insights : [];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -103,7 +105,7 @@ export default function InsightsPage() {
             className="py-2 px-3.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 font-medium text-slate-800 shadow-sm"
           >
             <option value="all">{t('allStaff')}</option>
-            {(insights || []).map((item) => (
+            {safeInsights.map((item) => (
               <option key={item.staff._id} value={item.staff._id}>
                 {item.staff.name}
               </option>
@@ -123,12 +125,12 @@ export default function InsightsPage() {
 
       {/* Staff Insights Cards */}
       <div className="space-y-6">
-        {(!insights || insights.length === 0) ? (
+        {safeInsights.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-sm glass-card rounded-2xl">
             No staff financial records found.
           </div>
         ) : (
-          insights.map((item) => {
+          safeInsights.map((item) => {
             const isExpanded = expandedStaffId === item.staff._id;
             const revList = item.revenues || [];
             const expList = item.expenses || [];

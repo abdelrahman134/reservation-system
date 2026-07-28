@@ -45,11 +45,12 @@ export default function ApartmentRevenuePage() {
       if (dateFilter.fromDate) query.append('fromDate', dateFilter.fromDate);
       if (dateFilter.toDate) query.append('toDate', dateFilter.toDate);
 
-      const res = await fetch(`/api/apartment-revenue?${query.toString()}`);
+      const res = await fetch(`/api/apartment-revenue?${query.toString()}`, { cache: 'no-store' });
       const resData = await res.json();
-      setData(resData);
+      setData(Array.isArray(resData) ? resData : []);
     } catch (err) {
       console.error(err);
+      setData([]);
     } finally {
       setLoading(false);
     }
@@ -60,7 +61,8 @@ export default function ApartmentRevenuePage() {
   }, [dateFilter.fromDate, dateFilter.toDate]);
 
   const chartColors = ['#0284c7', '#0d9488', '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b'];
-  const grandTotal = data.reduce((acc, a) => acc + a.totalRevenue, 0);
+  const safeData = Array.isArray(data) ? data : [];
+  const grandTotal = safeData.reduce((acc, a) => acc + (a.totalRevenue || 0), 0);
 
   return (
     <div className="space-y-8">
@@ -97,7 +99,7 @@ export default function ApartmentRevenuePage() {
         ) : (
           <div className="w-full h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 20 }}>
+              <BarChart data={safeData} margin={{ top: 10, right: 30, left: 20, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} />
                 <YAxis
@@ -114,7 +116,7 @@ export default function ApartmentRevenuePage() {
                   }}
                 />
                 <Bar dataKey="totalRevenue" radius={[8, 8, 0, 0]}>
-                  {data.map((entry, index) => (
+                  {safeData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                   ))}
                 </Bar>
@@ -142,7 +144,7 @@ export default function ApartmentRevenuePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.map((apt) => (
+              {safeData.map((apt) => (
                 <tr key={apt._id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-4 py-4 font-semibold text-slate-900 flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-slate-400" />
@@ -150,7 +152,7 @@ export default function ApartmentRevenuePage() {
                   </td>
                   <td className="px-4 py-4 text-slate-600">{apt.reservationCount}</td>
                   <td className="px-4 py-4 font-bold text-amber-600">
-                    ${apt.totalRevenue.toLocaleString()}
+                    ${(apt.totalRevenue || 0).toLocaleString()}
                   </td>
                 </tr>
               ))}
